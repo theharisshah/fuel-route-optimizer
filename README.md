@@ -25,7 +25,7 @@ TODO: routing call, finding stations near the route, fuel-stop algorithm
 - **Duplicate stations keep the cheapest price.** 678 truckstop IDs appear more than once, and most of them with different prices. One row is kept per ID at the lowest price, since that is the price a driver would pay.
 - **Name collisions use the larger city.** Where the cities dataset has two places with the same name in one state, the more populated one is used.
 
-**Coverage.** About 93% of US stations (7,004 of 7,531 rows) are matched to coordinates. The unmatched ones are mostly small New England and Pennsylvania towns and townships that the free cities dataset doesn't include. They are skipped and logged by the loader.
+**Coverage.** 6,160 of 6,626 US stations (93%) are matched to coordinates. The unmatched ones are mostly small New England and Pennsylvania towns and townships that the free cities dataset doesn't include; they are skipped and logged by the loader.
 
 **Price storage.** Prices are stored as floats. They are averaged estimates with up to 8 decimal places, and all route calculations are floating-point. Only the final total cost is rounded to cents.
 
