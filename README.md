@@ -31,7 +31,7 @@ Requires Python 3.12+.
 
 | Field | Description |
 |---|---|
-| `start` | A US place (`"Chicago, IL"`) or coordinates (`"41.8781,-87.6298"`) |
+| `start` | A US place (`"New York, NY"`) or coordinates (`"40.7128,-74.0060"`) |
 | `finish` | Same format as `start` |
 
 Coordinates skip geocoding, so they save API calls.
@@ -41,40 +41,70 @@ Coordinates skip geocoding, so they save API calls.
 ```Shell
 curl -X POST http://127.0.0.1:8000/api/route/ \
   -H "Content-Type: application/json" \
-  -d '{"start": "Chicago, IL", "finish": "Dallas, TX"}'
+  -d '{"start": "New York, NY", "finish": "Los Angeles, CA"}'
 ```
 
-`GET /api/route/?start=Chicago, IL&finish=Dallas, TX` works too, and opens DRF's browsable view in a browser.
+`GET /api/route/?start=New York, NY&finish=Los Angeles, CA` works too, and opens DRF's browsable view in a browser.
 
-**Response** (abridged; exact figures depend on the route returned by OpenRouteService)
+**Response** for New York → Los Angeles (abridged: 3 of 13 fuel stops and 3 of ~1,000 route points shown; exact figures depend on the route returned by OpenRouteService)
 
 ```json
 {
-  "start": {"query": "Chicago, IL", "lat": 41.87811, "lng": -87.6298},
-  "finish": {"query": "Dallas, TX", "lat": 32.77666, "lng": -96.79699},
-  "distance_miles": 911.7,
-  "duration_hours": 13.9,
+  "start": {"query": "New York, NY", "lat": 40.68295, "lng": -73.9708},
+  "finish": {"query": "Los Angeles, CA", "lat": 34.05513, "lng": -118.25703},
+  "distance_miles": 2798.0,
+  "duration_hours": 45.1,
   "fuel_stops": [
     {
-      "name": "RICKY ROCKETS FUEL CENTER",
-      "address": "SR-50 & SR-83",
-      "city": "Midlothian",
-      "state": "IL",
-      "lat": 41.6254,
-      "lng": -87.7243,
-      "mile": 18.0,
+      "name": "BOLLA MARKET",
+      "address": "I-95, EXIT 13",
+      "city": "Elizabeth",
+      "state": "NJ",
+      "lat": 40.6658,
+      "lng": -74.1913,
+      "mile": 7.0,
       "price_per_gallon": 3.099,
-      "gallons": 24.6,
-      "cost": 76.24
+      "gallons": 6.7,
+      "cost": 20.76
+    },
+    {
+      "name": "ACI TRUCK STOP",
+      "address": "US-46",
+      "city": "Columbia",
+      "state": "NJ",
+      "lat": 40.926,
+      "lng": -75.0945,
+      "mile": 74.0,
+      "price_per_gallon": 3.079,
+      "gallons": 32.3,
+      "cost": 99.45
+    },
+    ...
+    {
+      "name": "Maverik #674",
+      "address": "I-15, Exit 45",
+      "city": "North Las Vegas",
+      "state": "NV",
+      "lat": 36.2883,
+      "lng": -115.0888,
+      "mile": 2520.0,
+      "price_per_gallon": 3.282,
+      "gallons": 17.4,
+      "cost": 57.11
     }
   ],
-  "total_gallons": 89.37,
-  "total_fuel_cost": 263.62,
-  "route": {"type": "LineString", "coordinates": [[-87.6298, 41.87811], "..."]},
-  "meta": {"external_api_calls": 3, "stations_considered": 166, "elapsed_ms": 21},
-  "map_url": "http://127.0.0.1:8000/map/?start=Chicago%2C+IL&finish=Dallas%2C+TX"
+  "total_gallons": 279.1,
+  "total_fuel_cost": 846.94,
+  "route": {
+    "type": "LineString",
+    "coordinates": [[-73.97083, 40.68295], [-73.98138, 40.68993], ..., [-118.25702, 34.05512]]
+  },
+  "meta": {"external_api_calls": 0, "stations_considered": 434, "elapsed_ms": 92},
+  "map_url": "http://127.0.0.1:8000/map/?start=New+York%2C+NY&finish=Los+Angeles%2C+CA"
 }
 ```
+
+This example is a repeat request served from cache (`external_api_calls: 0`); the first request for a trip makes 3.
 
 - `route` is a GeoJSON LineString (`[lng, lat]` order, per the GeoJSON spec), thinned to at most ~1,000 points.
 - `mile` is the distance from the start, along the route, where you pass the station.
@@ -117,7 +147,7 @@ The classic greedy algorithm for refuelling along a fixed route. At each station
 
 This is verified optimal against exhaustive search on randomly generated routes. Gallons bought are miles ÷ 10, and the total cost is the sum of gallons × price at each stop.
 
-**Speed.** Geocoding and route results are cached for 24 hours, so a repeated trip makes 0 external API calls. Everything after the routing call runs locally in about 20–40 ms.
+**Speed.** Geocoding and route results are cached for 24 hours, so a repeated trip makes 0 external API calls. Everything after the routing call runs locally: about 20 ms for a 900-mile trip and under 100 ms coast to coast.
 
 ## Data & assumptions
 
