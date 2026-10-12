@@ -11,6 +11,10 @@ class RoutingError(Exception):
     """Custom exception"""
 
 
+class LocationNotFound(RoutingError):
+    """Raised when a place name can't be geocoded."""
+
+
 def geocode(place: str) -> tuple[float, float]:
     params = {
         "text": place,
@@ -21,7 +25,7 @@ def geocode(place: str) -> tuple[float, float]:
 
     features = data.get("features") or []
     if not features:
-        raise RoutingError(f"Could not find location: {place}")
+        raise LocationNotFound(f"Could not find location: {place}")
 
     lng, lat = features[0]["geometry"]["coordinates"]
     return lat, lng

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Fuel Route Planner</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1f2933; }
+    header { padding: 12px 16px; border-bottom: 1px solid #e4e7eb; }
+    form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    input { padding: 6px 8px; min-width: 200px; }
+    button { padding: 6px 14px; cursor: pointer; }
+    .summary { margin-top: 8px; font-size: 14px; }
+    .error { color: #b42318; margin-top: 8px; }
+    main { display: flex; height: calc(100vh - 110px); }
+    #map { flex: 1; }
+    aside { width: 340px; overflow-y: auto; border-left: 1px solid #e4e7eb; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 6px 8px; border-bottom: 1px solid #f0f2f4; text-align: left; }
+    td.num, th.num { text-align: right; }
+    @media (max-width: 800px) { main { flex-direction: column; height: auto; } #map { height: 60vh; } aside { width: auto; border-left: 0; } }
+  </style>
+</head>
+<body>
+  <header>
+    <form method="get">
+      <input name="start" value="{{ start }}" placeholder="Start, e.g. Chicago, IL" required>
+      <input name="finish" value="{{ finish }}" placeholder="Finish, e.g. Dallas, TX" required>
+      <button type="submit">Plan route</button>
+    </form>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    {% if trip %}
+      <div class="summary">
+        <strong>{{ trip.distance_miles }} miles</strong> · {{ trip.duration_hours }} h driving ·
+        <strong>{{ trip.fuel_stops|length }} fuel stops</strong> · {{ trip.total_gallons }} gal ·
+        <strong>${{ trip.total_fuel_cost }}</strong> total fuel cost
+      </div>
+    {% endif %}
+  </header>
+
+  {% if trip %}
+  <main>
+    <div id="map"></div>
+    <aside>
+      <table>
+        <thead><tr><th>Stop</th><th class="num">Mile</th><th class="num">$/gal</th><th class="num">Gal</th><th class="num">Cost</th></tr></thead>
+        <tbody>
+          {% for stop in trip.fuel_stops %}
+          <tr>
+            <td>{{ forloop.counter }}. {{ stop.name }}<br><small>{{ stop.city }}, {{ stop.state }}</small></td>
+            <td class="num">{{ stop.mile }}</td>
+            <td class="num">{{ stop.price_per_gallon }}</td>
+            <td class="num">{{ stop.gallons }}</td>
+            <td class="num">{{ stop.cost }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </aside>
+  </main>
+  {{ trip|json_script:"trip-data" }}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const trip = JSON.parse(document.getElementById("trip-data").textContent);
+    const map = L.map("map");
+    // OSM tile servers reject requests without a Referer; Django's default policy strips it.
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      referrerPolicy: "strict-origin-when-cross-origin",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+
+    // GeoJSON stores [lng, lat]; Leaflet wants [lat, lng].
+    const line = trip.route.coordinates.map(([lng, lat]) => [lat, lng]);
+    const route = L.polyline(line, { color: "#2563eb", weight: 4 }).addTo(map);
+    map.fitBounds(route.getBounds(), { padding: [20, 20] });
+
+    L.marker([trip.start.lat, trip.start.lng]).addTo(map).bindPopup("Start: " + trip.start.query);
+    L.marker([trip.finish.lat, trip.finish.lng]).addTo(map).bindPopup("Finish: " + trip.finish.query);
+
+    trip.fuel_stops.forEach((stop, i) => {
+      L.circleMarker([stop.lat, stop.lng], { radius: 8, color: "#b45309", fillColor: "#f59e0b", fillOpacity: 0.9 })
+        .addTo(map)
+        .bindPopup(`<b>${i + 1}. ${stop.name}</b><br>${stop.city}, ${stop.state}<br>Mile ${stop.mile}<br>$${stop.price_per_gallon}/gal · ${stop.gallons} gal · $${stop.cost}`);
+    });
+  </script>
+  {% endif %}
+</body>
+</html>
