@@ -4,7 +4,26 @@ A Django REST API that takes a start and finish location in the USA and returns 
 
 ## Setup
 
-TODO: venv, `pip install -r requirements.txt`, `.env`, `migrate`, `load_stations`
+Requires Python 3.12+.
+
+1. Create a virtual environment and install dependencies:
+   ```Shell
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+2. Copy `.env.example` to `.env` and fill in the values:
+   - `SECRET_KEY`: any long random string
+   - `ORS_API_KEY`: a free key from [openrouteservice.org](https://openrouteservice.org/dev/#/signup)
+3. Create the database and load the fuel stations (one-time, takes a few seconds):
+   ```Shell
+    python manage.py migrate
+    python manage.py load_stations
+   ```
+4. Start the server:
+   ```Shell
+   python manage.py runserver
+   ```
 
 ## API usage
 
@@ -12,7 +31,15 @@ TODO: endpoint, request/response example
 
 ## How it works
 
-TODO: routing call, finding stations near the route, fuel-stop algorithm
+**External API calls: 3 per request.** All map and routing data comes from [OpenRouteService](https://openrouteservice.org) (free, no credit card required), isolated in `routing/ors.py`:
+
+1. Geocode the start location (place name → coordinates)
+2. Geocode the finish location
+3. Get the driving route: distance in miles plus the route geometry (the list of points along the road)
+
+Turn-by-turn instructions are disabled in the routing request, which keeps the response small and fast. The ORS API key is sent in a request header, never in the URL, so it cannot leak into logs or error messages.
+
+TODO: finding stations near the route, fuel-stop algorithm
 
 ## Data & assumptions
 
@@ -38,3 +65,4 @@ TODO: routing call, finding stations near the route, fuel-stop algorithm
 
 - Fuel prices: provided by Spotter for this assessment.
 - US city coordinates: [Simplemaps US Cities Database (Basic)](https://simplemaps.com/data/us-cities), licensed under CC BY 4.0.
+- Routing and geocoding: [openrouteservice.org](https://openrouteservice.org) by HeiGIT. Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
